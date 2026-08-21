@@ -10,6 +10,9 @@ enable_poke_back = true
 # 留空则不注入
 bot_nickname = ""
 
+# 不响应戳一戳的群 QQ 号列表；留空表示不屏蔽任何群。
+group_blacklist = []
+
 # ---------- 插件基础设置 ----------
 [plugin]
 # 是否启用插件

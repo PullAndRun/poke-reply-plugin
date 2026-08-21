@@ -28,6 +28,10 @@ class PokeReplyConfig(PluginConfigBase):
     __ui_label__ = "戳一戳回复"
 
     plugin: PluginSectionConfig = Field(default_factory=PluginSectionConfig)
+    group_blacklist: list[str] = Field(
+        default_factory=list,
+        description="不响应戳一戳的群 QQ 号列表",
+    )
     enable_poke_back: bool = Field(default=True, description="是否同时回戳对方")
     bot_nickname: str = Field(default="", description="Bot 在 QQ 上的昵称，用于注入戳一戳文本中")
 
@@ -105,6 +109,10 @@ class PokeReplyPlugin(MaiBotPlugin):
         self_id = str(additional.get("self_id") or raw_payload.get("self_id") or "")
         group_id = str(group_info.get("group_id") or raw_payload.get("group_id") or "")
         group_name = str(group_info.get("group_name") or "")
+
+        if group_id and _is_group_blacklisted(group_id, self.config.group_blacklist):
+            self.ctx.logger.info("Skipping poke event in blacklisted group %s", group_id)
+            return None
 
         if not self_id:
             self.ctx.logger.warning("无法获取 bot 自身 QQ 号 (self_id)，跳过")
@@ -190,3 +198,13 @@ def _extract_poke_action(raw_payload: Dict[str, Any]) -> tuple[str, str]:
         if nor_parts:
             return nor_parts[0], "".join(nor_parts[1:])
     return "", ""
+
+
+def _is_group_blacklisted(group_id: str, blacklist: object) -> bool:
+    """Return whether a group id is present in the configured blacklist."""
+    normalized_group_id = str(group_id).strip()
+    if not normalized_group_id or not isinstance(blacklist, (list, tuple, set)):
+        return False
+    return normalized_group_id in {
+        str(item).strip() for item in blacklist if str(item).strip()
+    }
